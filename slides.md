@@ -826,7 +826,7 @@ Taka implementacja wzorca ma taką przewagę nad poprzednią, że uniemożliwia 
 nawet przy użyciu **refleksji** i **deserializacji**. 
 
 ---
-Jeżeli tworzenie instancji jest kosztowne, to ze względów optymalizacyjnych, może być wskazanie tworzeniej jej dopiero przy pierszym użyciu:
+Jeżeli tworzenie instancji jest kosztowne, to ze względów optymalizacyjnych, może być wskazanie tworzeniej jej dopiero przy pierwszym użyciu:
 
 ```java
 public class ConnectionHandler {
@@ -981,7 +981,7 @@ new EventOrganizer(new DatabaseParticipantSaver()); ||2||
 ```
 
 
-||1|| Klasa **EventOrganizer** przyjmuje jako zależność obiekt implementujący interfejs **ParticipantSaver**
+||1|| Klasa **EventOrganizer** przyjmuje jako zależność obiekt implementujący interfejs **ParticipantSaver**. =>
 ||2|| Podczas tworzenia obiektu musimy przekazać obiekt klasy implementującej interfejs **ParticipantSaver** jako zależność.
 
 ---
@@ -996,7 +996,7 @@ interface EnhancedParticipantSaver {
 ```java
 __new EventOrganizer(new DatabaseEnhancedParticipantSaver());__ ||1||
 ```
-Użycie zworca **adapter** umożliwia stworzenie pośredniej warsty kompatybilności pomiedzy obydwoma interfejsami:
+Użycie wzorca **adapter** umożliwia stworzenie pośredniej warsty kompatybilności pomiedzy obydwoma interfejsami:
 
 ```java
 class EnhancedParticipantSaverAdapter implements ParticipantSaver{ ||2||
@@ -1328,7 +1328,6 @@ class Tiger implements Animal {
         visitor.apply(this); ||1||
     }
 }
-
 class Bat implements Animal {
     public void fly() {
         System.out.println("Fruń!");
@@ -1337,7 +1336,6 @@ class Bat implements Animal {
       visitor.apply(this); ||1||
     }
 }
-
 class Fish implements Animal {
     public void swim() {
         System.out.println("Płyń!");
@@ -1475,9 +1473,11 @@ class NegativeProcessor implements Chain {
     public void process(int number) { 
         if (number < 0) { ||2||
             System.out.println("Negative number: " + number); 
-        } else { 
+        } else if (next != null) { 
             next.process(request); 
-        } 
+        } else {
+            throw new IllegalStateException("Can't handle request!");
+        }
     } 
 } 
 ```
