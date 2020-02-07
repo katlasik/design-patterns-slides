@@ -19,7 +19,7 @@ również zależności pomiędzy klasami.
 ---
 
 Diagram klasy składa się z trzech części: **nazwy**, **atrybutów** (pól klasy) oraz **akcji** (metod).
-Widoczność **klas**, **atrybutów** lub **akcji** możemy oznaczać poprzez modyfikatory widoczności dodawane ich nazwami.
+Widoczność **klas**, **atrybutów** lub **akcji** możemy oznaczać poprzez modyfikatory widoczności dodawane przed ich nazwami.
 
 * **-** - dostęp prywatny
 * **+** - dostęp publiczny
@@ -39,6 +39,12 @@ wskazuje strzałka posiada referencje do obiektów drugiej klasy, a ich cykle ż
 * Otwarty romb ![?uml-aggregations](/assets/uml-aggregation.png) oznacza **agregację**, co oznacza, że klasa na którą
 wzkazuje strzałka posiada referencję do obiektów drugiej klasy, ale cykle żyć obiektów tych klas są niezależne.
 
+Przy pomocy liczby lub przedziału, na przykład **0..n** (od zero w górę) lub **1..4** (od jeden do czterech) możemy
+również określać krotność relacji. Dodanie **2..3** do strzałki kompozycji oznacza, że obiekt komponujący zawiera od **2** do **3**
+obiektów komponowanych.
+
+![uml-class](/assets/uml-composition-n.png)
+
 ---
 Przykładowa zależność może wyglądać następująco:
 ![uml](/assets/uml.png)
@@ -50,6 +56,7 @@ class Animal {
     private double weight;
     protected int speed;
     private final Stomach stomach = new Stomach();
+    private final List<Leg> legs = new ArrayList<>();
     private Lair lair;
     
     int getSpeed() {
@@ -81,7 +88,7 @@ class Goat extends Animal {
 ---
 
 ### SOLID
-Skrótowiec **SOLID** oznacza pięć założeń programowania obiektowego.
+Skrótowiec **SOLID** oznacza pięć dobrych praktyk obiektowego.
 
 ---
 
@@ -109,7 +116,7 @@ Zasada "*programuj do interfejsu*", oznacza, że należy tworzyć nowe klasy naj
 ---
 
 ### WZORCE PROJEKTOWE
-**Wzorce projektowe** (*ang. design patterns*) to uniwersalne, sprawdzone rozwiązania często pojawiającyh się 
+**Wzorce projektowe** (*ang. design patterns*) to uniwersalne, sprawdzone rozwiązania dla często pojawiających się 
 problemów występujących podczas projektowania systemów zorientowanych obiektowo.
 
 ---
@@ -738,7 +745,6 @@ public class ListJoiner<T> {
     protected ListJoiner(BiFunction<T, T, T> combiner) { ||1||
         this.combiner = combiner;
     }
-
     T join(List<T> list) {
         if(list.size() >= 2) {
             T result = combiner.apply(list.get(0), list.get(1)); ||2||
@@ -913,6 +919,91 @@ public class ConnectionHandler {
 @! Użycie wzorca **singleton** powoduje, że bardzo ciężko jest podmienić jego instancję na inną na potrzeby testów. Jeżeli to możliwe należy unikać tego wzorca i zapewniać tworzenie pojedynczej instancji na przykład przez mechanizm **wstrzykiwania zależności**.!@
 
 ---
+
+#### COMMAND
+Wzorzec **Command** pozwala traktować żądanie wykonania określonej czynności jako obiekt.
+
+---
+Wzorzec **polecenie** zakłada, że dla możliwych do wykonania na danym obiekcie czynności, zostaną stworzone osobne klasy
+implementujące wspólny interfejs.
+
+```java
+interface Command {
+    void execute();
+}
+```
+
+```java
+public class StartEngine implements Command { ||1||
+    private final Engine engine;
+    public StartEngine(Engine engine) { ||2||
+        this.engine = engine;
+    }
+    @Override
+    void execute() { ||3||
+        engine.start();
+    }
+}
+public class StopEngine implements Command { ||1||
+    private final Engine engine;
+    public StopEngine(Engine engine) { ||2||
+        this.engine = engine;
+    }
+    @Override
+    void execute() { ||3||
+        engine.stop();
+    }
+}
+```
+||1|| Wszystkie polecenia implementują wspólny interfejs **Command**. =>
+||2|| Obiekt klasy **Engine** przekazaywany jest jako parametr do poleceń. Jest to tak zwany **model** poleceń. =>
+||3|| Metody **execute** zamykają w sobie logikę wykonywaną przez polecenia.
+
+---
+Klasą, która przechowuje i zarządza poleceniami jest tak zwany **broker**
+
+```java
+interface CommandBroker{
+    void addCommand(Command command);
+    void executeAll();
+}
+
+class EngineCommandBroker implements CommandBroker {
+    private final List<Command> commands = new ArrayList<>(); ||1||
+
+    void addCommand(Command command) { ||1||
+        commands.add(command);
+    }
+    
+    void executeAll() { ||2||
+        for(Command c: commands) {
+            c.execute();
+        }
+    }
+}
+```
+||1|| Polecenia przechowywane są w liście. =>
+||2|| Wywowałenie **executeAll** przechodzi po wszystkich poleceniach po kolei je wykonując.
+---
+
+Można również zmodyfikować interfejs w ten sposób, że **model** przekazywany jest dopiero w momencie wykonywania polecenia:
+```java
+interface Command<T> {
+    void execute(T t);
+}
+```
+
+W takim przypadku **model** musi być albo przechowywany w **brokerze** i przekazywane jako parametr w metodzie **executeAll**:
+```java
+void executeAll(Engine engine) { 
+    for(Command c: commands) {
+        c.execute(engine);
+    }
+}
+```
+
+---
+
 #### FACADE
 Wzorzec **fasada** służy do ujednolicenia dostępu do złożonego systemu poprzez wystawienie uproszczonego, uporządkowanego interfejsu programistycznego, który ułatwia jego użycie. 
 
@@ -988,21 +1079,21 @@ new EventOrganizer(new DatabaseParticipantSaver()); ||2||
 Przekazanie jako zależność obiektu niekompatybilnej klasy nie jest możliwe: 
 
 ```java
-interface EnhancedParticipantSaver {
+interface EmployeeAdder {
     void add(String firstName, String lastName); ||1||
 }
 ```
 
 ```java
-__new EventOrganizer(new DatabaseEnhancedParticipantSaver());__ ||1||
+__new EventOrganizer(new DatabaseEmployeeAdder());__ ||1||
 ```
 Użycie wzorca **adapter** umożliwia stworzenie pośredniej warsty kompatybilności pomiedzy obydwoma interfejsami:
 
 ```java
-class EnhancedParticipantSaverAdapter implements ParticipantSaver{ ||2||
-    private final EnhancedParticipantSaver enhanced;
+class EmployeeAdderAdapter implements ParticipantSaver{ ||2||
+    private final EmployeeAdder enhanced;
 
-    EnhancedParticipantSaverAdapter(EnhancedParticipantSaver enhanced) { ||3||
+    EmployeeAdderAdapter(EmployeeAdder enhanced) { ||3||
         this.enhanced = enhanced;
     }
     
@@ -1023,8 +1114,15 @@ class EnhancedParticipantSaverAdapter implements ParticipantSaver{ ||2||
 
 Następnie możemy wykorzystać klasę **adaptera** jako wartwę kompatybilności między odmiennymi **interfejsami**:
 ```java
-new EventOrganizer(new EnhancedParticipantSaverAdapter(new EnhancedParticipantSaver()));
+new EventOrganizer(new EmployeeAdderAdapter(new DatabaseEmployeeAdder()));
 ```
+
+---
+
+Przykładowy wykres UML wzorca:
+
+![adapter](/assets/dp-adapter.png)
+
 ---
 
 #### DECORATOR
@@ -1092,6 +1190,11 @@ var l2 = generator.next(); #! 102 !#
 var l3 = generator.next(); #! 90 !#
 var m = generator.max(); #! 102 !#
 ```
+---
+Przykładowy wykres UML wzorca:
+
+![adapter](/assets/dp-decorator.png)
+
 
 ---
 
@@ -1144,6 +1247,12 @@ engine.parse("<html></html>");
 ||2|| Egzemplarz originalnej klasy jest tworzona leniwie dopiero podczas pierwszego użycia. =>
 ||3|| Jeżeli instancja klasy jest tworzona przez **fabrykę** lub **metodę fabryczną** zwracającą typ interfejsu, =>
 to dla użytkownika nie do rozróżnienia jest czy otrzymuje **pośrednika** czy instancję oryginalnej klasy. 
+
+---
+
+Przykładowy wykres UML wzorca:
+
+![adapter](/assets/dp-proxy.png)
 
 ---
 
@@ -1376,6 +1485,12 @@ W zależności od tego jaki obiekt zostanie przekazany zostanie wywołana odpowi
 
 ---
 
+Przykładowy wykres UML wzorca:
+
+![adapter](/assets/dp-visitor.png)
+
+---
+
 #### OBSERVER
 Wzorzec **obserwartor** używany jest do powiadamiania zainteresowanych obiektów o zmianie stanu pewnego innego obiektu. 
 
@@ -1441,6 +1556,12 @@ observable.singleClick(); ||2||
 
 ||1|| Możemy przekazywać do **abbObserver** dowolne obiekty jeżeli implementują **Observer**. =>
 ||2|| Po wywołaniu **singleClick** wszystcy obserwatorzy otrzymują notyfikacje.
+
+---
+Przykładowy wykres UML wzorca:
+
+![adapter](/assets/dp-observer.png)
+
 
 ---
 
